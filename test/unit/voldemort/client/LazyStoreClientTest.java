@@ -69,9 +69,10 @@ public class LazyStoreClientTest extends DefaultStoreClientTest {
     private LazyStoreClient<String, String> newLazyStoreClient(final StoreClientFactory factory) {
         return new LazyStoreClient<String, String>(new Callable<StoreClient<String, String>>() {
 
+            @Override
             public StoreClient<String, String> call() throws Exception {
                 return factory.getStoreClient("test");
             }
-        }, false);
+        });
     }
 }
