@@ -155,7 +155,8 @@ public class HdfsFetcher implements FileFetcher {
                 ", fetcher socket timeout = " + socketTimeout + " ms.");
     }
 
-    public File fetch(String source, String dest) throws IOException {
+    @Override
+    public File fetch(String source, String dest) throws Exception {
         return fetch(source, dest, null, null, -1, null);
     }
 
@@ -165,7 +166,7 @@ public class HdfsFetcher implements FileFetcher {
                       AsyncOperationStatus status,
                       String storeName,
                       long pushVersion,
-                      MetadataStore metadataStore) throws IOException {
+                      MetadataStore metadataStore) throws Exception {
 
         ObjectName jmxName = null;
         HdfsCopyStats stats = null;
@@ -208,22 +209,14 @@ public class HdfsFetcher implements FileFetcher {
             } else {
                 return null;
             }
-        } catch(QuotaExceededException e) {
-            if(stats != null) {
-                stats.reportError("File fetcher failed for due to QuotaExceededException for destination "
-                                          + destinationFile,
-                                  e);
-            }
-            throw e;
-
         } catch(Exception e) {
             if(stats != null) {
                 stats.reportError("File fetcher failed for destination " + destinationFile, e);
             }
             String errorMessage = "Error thrown while trying to get data from Hadoop filesystem : ";
-            logger.error(errorMessage);
+            logger.error(errorMessage, e);
             if(e instanceof VoldemortException) {
-                throw (VoldemortException) e;
+                throw e;
             } else {
                 throw new VoldemortException(errorMessage, e);
             }
@@ -297,35 +290,13 @@ public class HdfsFetcher implements FileFetcher {
                  */
 
                 if(diskQuotaSizeInKB != null) {
-                    Long diskQuotaInKB = Long.parseLong(diskQuotaSizeInKB.getValue());
-                    String logMessage = "Store: " + storeName + ", Destination: "
-                                        + dest.getAbsolutePath() + ", Expected disk size in KB: "
-                                        + (estimatedDiskSize / ByteUtils.BYTES_PER_KB)
-                                        + ", Disk quota size in KB: " + diskQuotaInKB;
-                    if(logger.isDebugEnabled()) {
-                        logger.error(logMessage);
-                    }
-                    if(diskQuotaInKB == 0L){
-                        String errorMessage = "This store: \'"
-                                              + storeName
-                                              + "\' does not belong to this Voldemort cluster. Please use a valid bootstrap url.";
-                        logger.error(errorMessage);
-                        throw new VoldemortException(errorMessage);
-                    }
-                    // check if there is still sufficient quota left for this push
-                    Long estimatedDiskSizeNeeded = (estimatedDiskSize / ByteUtils.BYTES_PER_KB) ;
-                    if(estimatedDiskSizeNeeded >= diskQuotaInKB) {
-                        String errorMessage = "Quota Exceeded for " + logMessage;
-                        logger.error(errorMessage);
-                        throw new QuotaExceededException(errorMessage);
-                    }
+                    checkIfQuotaExceeded(diskQuotaSizeInKB, storeName, dest, estimatedDiskSize);
                 } else {
                     if(logger.isDebugEnabled()) {
                         logger.debug("store: " + storeName + " is a Non Quota type store.");
                     }
                 }
                 Map<HdfsFile, byte[]> fileCheckSumMap = fetchStrategy.fetch(directory, dest);
-
                 return directory.validateCheckSum(fileCheckSumMap);
 
             } else if(allowFetchOfFiles) {
@@ -342,6 +313,34 @@ public class HdfsFetcher implements FileFetcher {
             if(adminClient != null) {
                 adminClient.close();
             }
+        }
+    }
+
+    private void checkIfQuotaExceeded(Versioned<String> diskQuotaSizeInKB,
+                            String storeName,
+                            File dest,
+                            Long estimatedDiskSize) {
+        Long diskQuotaInKB = Long.parseLong(diskQuotaSizeInKB.getValue());
+        String logMessage = "Store: " + storeName + ", Destination: " + dest.getAbsolutePath()
+                            + ", Expected disk size in KB: "
+                            + (estimatedDiskSize / ByteUtils.BYTES_PER_KB)
+                            + ", Disk quota size in KB: " + diskQuotaInKB;
+        if(logger.isDebugEnabled()) {
+            logger.error(logMessage);
+        }
+        if(diskQuotaInKB == 0L) {
+            String errorMessage = "This store: \'"
+                                  + storeName
+                                  + "\' does not belong to this Voldemort cluster. Please use a valid bootstrap url.";
+            logger.error(errorMessage);
+            throw new VoldemortException(errorMessage);
+        }
+        // check if there is still sufficient quota left for this push
+        Long estimatedDiskSizeNeeded = (estimatedDiskSize / ByteUtils.BYTES_PER_KB);
+        if(estimatedDiskSizeNeeded >= diskQuotaInKB) {
+            String errorMessage = "Quota Exceeded for " + logMessage;
+            logger.error(errorMessage);
+            throw new QuotaExceededException(errorMessage);
         }
     }
 
