@@ -917,7 +917,7 @@ public class AdminClient implements Closeable {
                     String errorMessage = "Failed while waiting for async task ("
                             + description + ") at " + nodeName
                             + " to finish";
-                    if(e instanceof QuotaExceededException){
+                    if(e instanceof VoldemortException) {
                         throw (VoldemortException) e;
                     } else {
                         throw new VoldemortException(errorMessage, e);
