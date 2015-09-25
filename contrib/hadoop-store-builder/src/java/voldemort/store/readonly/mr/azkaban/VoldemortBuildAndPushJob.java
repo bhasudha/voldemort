@@ -639,6 +639,8 @@ public class VoldemortBuildAndPushJob extends AbstractJob {
 
             // set Zero Quota for new stores that are created as part of build
             Long quotaValue = 0L;
+            log.info("New incoming push for Store: " + storeName
+                     + " .Setting quota for this new store to 0.");
             adminClientPerCluster.get(url).quotaMgmtOps.setQuota(storeName,
                                                                  QuotaType.STORAGE_SPACE.toString(),
                                                                  quotaValue.toString());
