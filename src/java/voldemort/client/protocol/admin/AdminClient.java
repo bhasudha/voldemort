@@ -4233,6 +4233,9 @@ public class AdminClient implements Closeable {
 
             List<Integer> liveNodes = Lists.newArrayList(currentCluster.getNodeIds());
             liveNodes.removeAll(failedNodes);
+            if(liveNodes.isEmpty()) {
+                return false;
+            }
             Integer randomIndex = (int) (Math.random() * liveNodes.size());
             Integer randomNodeId = liveNodes.get(randomIndex);
 

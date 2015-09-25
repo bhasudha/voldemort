@@ -43,6 +43,7 @@ import voldemort.store.readonly.FileFetcher;
 import voldemort.store.readonly.ReadOnlyStorageMetadata;
 import voldemort.store.readonly.checksum.CheckSum.CheckSumType;
 import voldemort.store.readonly.mr.utils.HadoopUtils;
+import voldemort.store.readonly.swapper.InvalidBootstrapURLException;
 import voldemort.utils.ByteUtils;
 import voldemort.utils.EventThrottler;
 import voldemort.utils.JmxUtils;
@@ -333,7 +334,7 @@ public class HdfsFetcher implements FileFetcher {
                                   + storeName
                                   + "\' does not belong to this Voldemort cluster. Please use a valid bootstrap url.";
             logger.error(errorMessage);
-            throw new VoldemortException(errorMessage);
+            throw new InvalidBootstrapURLException(errorMessage);
         }
         // check if there is still sufficient quota left for this push
         Long estimatedDiskSizeNeeded = (estimatedDiskSize / ByteUtils.BYTES_PER_KB);
