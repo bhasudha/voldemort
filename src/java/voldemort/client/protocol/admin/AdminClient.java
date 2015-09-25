@@ -918,8 +918,7 @@ public class AdminClient implements Closeable {
                             + description + ") at " + nodeName
                             + " to finish";
                     if(e instanceof QuotaExceededException){
-                        String reason = ((QuotaExceededException) e).getMessage();
-                        throw new QuotaExceededException(errorMessage + "Reason: " + reason);
+                        throw (VoldemortException) e;
                     } else {
                         throw new VoldemortException(errorMessage, e);
                     }
